@@ -74,6 +74,30 @@ def atr_at(ex, symbol, entry_ms):
     return atr if atr > 0 else None
 
 
+BTC = M.BTC_SYMBOL
+
+
+def btc_trend_at(ex, entry_ms):
+    """
+    روند BTC ۴ساعته در لحظه‌ی ورود (همان قاعده‌ی trend_of ربات:
+    EMA9 بالاتر از EMA21 یعنی LONG، پایین‌تر یعنی SHORT) روی آخرین کندل ۴ساعته‌ی بسته‌شده.
+    """
+    h4 = M.TF_MS["4h"]
+    df = fetch_all(ex, BTC, "4h", entry_ms - 120 * h4, entry_ms + h4)
+    if len(df) < 60:
+        return "UNKNOWN"
+    df = M.calculate_indicators(df)
+    closed = df[df["timestamp"] + h4 <= entry_ms]
+    if closed.empty:
+        return "UNKNOWN"
+    last = closed.iloc[-1]
+    if last["ema9"] > last["ema21"]:
+        return "LONG"
+    if last["ema9"] < last["ema21"]:
+        return "SHORT"
+    return "NONE"
+
+
 def simulate(direction, entry, sl, tp, path):
     """
     path: کندل‌های ۵دقیقه‌ای از ورود به بعد.
@@ -112,6 +136,25 @@ def summarize(label, outcomes):
           f"برد={tp / n:5.1%}  R کل={sum(rs):+8.1f}  میانگین R={sum(rs) / n:+.3f}")
 
 
+def run_grid(label, sel, detail):
+    for sl_m in SL_GRID:
+        for tp_m in TP_GRID:
+            outcomes = []
+            for p in sel:
+                a = p["atr"]
+                if p["dir"] == "LONG":
+                    sl, tp = p["entry"] - sl_m * a, p["entry"] + tp_m * a
+                else:
+                    sl, tp = p["entry"] + sl_m * a, p["entry"] - tp_m * a
+                k, r = simulate(p["dir"], p["entry"], sl, tp, p["path"])
+                outcomes.append((k, r))
+                detail.append({"mode": label, "symbol": p["sym"], "entry_time": p["row"]["entry_time_iran"],
+                               "direction": p["dir"], "btc_4h": p["btc"], "sl_atr": sl_m, "tp_atr": tp_m,
+                               "result": k, "R": "" if r is None else round(r, 4)})
+            tag = "  <- قبلی" if (sl_m, tp_m) == (1.2, 3.0) else ""
+            summarize(f"SL {sl_m:.1f} / TP {tp_m:.1f}{tag}", outcomes)
+
+
 def main_run():
     ex = M.create_exchange()
     with open(CSV_PATH, encoding="utf-8") as fh:
@@ -137,24 +180,25 @@ def main_run():
         if atr is None or len(path) == 0:
             skipped.append((sym, r["entry_time_iran"], "ATR یا کندل ۵دقیقه‌ای نبود"))
             continue
+        try:
+            btc = btc_trend_at(ex, ems)
+        except Exception:
+            btc = "UNKNOWN"
         prepared.append({"row": r, "sym": sym, "entry": entry, "dir": direction,
                          "tp_rec": tp_rec, "sl_rec": sl_rec, "rec_status": r["status"],
-                         "atr": atr, "path": path, "ems": ems})
+                         "atr": atr, "path": path, "ems": ems, "btc": btc})
 
     print(f"قابل بازپخش: {len(prepared)} | کنار گذاشته‌شده: {len(skipped)}")
-    for s in skipped[:10]:
-        print("  skip:", s)
+    for s_ in skipped[:10]:
+        print("  skip:", s_)
 
-    # ---- اعتبارسنجی ۱: ATR محاسبه‌شده با ATR ضمنی سطوح روند (TP = ورود ± 3 ATR)
+    # ---- اعتبارسنجی ۱: ATR
     ratios = []
     for p in prepared:
-        if p["dir"] == "LONG":
-            implied = (p["tp_rec"] - p["entry"]) / 3.0
-        else:
-            implied = (p["entry"] - p["tp_rec"]) / 3.0
         rec_risk = abs(p["entry"] - p["sl_rec"])
         if rec_risk <= 0:
-            continue  # قیمت‌های گردشده‌ی فایل (مثلاً ۹e-06) قابل استفاده نیستند
+            continue
+        implied = ((p["tp_rec"] - p["entry"]) if p["dir"] == "LONG" else (p["entry"] - p["tp_rec"])) / 3.0
         if implied > 0 and abs(abs(p["tp_rec"] - p["entry"]) / rec_risk - 2.5) < 0.05:
             ratios.append(p["atr"] / implied)
     if ratios:
@@ -162,7 +206,7 @@ def main_run():
         print(f"اعتبارسنجی ATR (فقط معاملات روند): نسبت میانه = {ratios[len(ratios) // 2]:.3f} "
               f"(باید نزدیک ۱ باشد) | تعداد = {len(ratios)}")
 
-    # ---- اعتبارسنجی ۲: بازپخش با سطوح خود فایل
+    # ---- اعتبارسنجی ۲: بازپخش با سطوح واقعی
     rec_out = []
     match = 0
     for p in prepared:
@@ -173,24 +217,14 @@ def main_run():
     print(f"اعتبارسنجی بازپخش با سطوح واقعی: {match}/{len(prepared)} هم‌خوان با نتیجه‌ی ثبت‌شده")
     summarize("سطوح واقعی", rec_out)
 
-    # ---- شبکه‌ی SL و TP بر حسب ATR
     detail = []
-    print("-" * 110)
-    for sl_m in SL_GRID:
-        for tp_m in TP_GRID:
-            outcomes = []
-            for p in prepared:
-                a = p["atr"]
-                if p["dir"] == "LONG":
-                    sl, tp = p["entry"] - sl_m * a, p["entry"] + tp_m * a
-                else:
-                    sl, tp = p["entry"] + sl_m * a, p["entry"] - tp_m * a
-                k, r = simulate(p["dir"], p["entry"], sl, tp, p["path"])
-                outcomes.append((k, r))
-                detail.append({"symbol": p["sym"], "entry_time": p["row"]["entry_time_iran"],
-                               "direction": p["dir"], "sl_atr": sl_m, "tp_atr": tp_m,
-                               "result": k, "R": "" if r is None else round(r, 4)})
-            summarize(f"SL {sl_m:.1f} / TP {tp_m:.1f}", outcomes)
+    filt = [p for p in prepared if p["btc"] in ("LONG", "SHORT") and p["btc"] == p["dir"]]
+    print("=" * 110)
+    print(f"بدون فیلتر BTC: {len(prepared)} معامله")
+    run_grid("no_filter", prepared, detail)
+    print("=" * 110)
+    print(f"با فیلتر BTC ۴ساعته (فقط جهت هم‌راستا با روند BTC): {len(filt)} معامله از {len(prepared)}")
+    run_grid("btc4h_filter", filt, detail)
 
     with open(OUT_TRADES, "w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=list(detail[0].keys()))
