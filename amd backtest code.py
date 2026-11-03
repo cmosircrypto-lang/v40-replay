@@ -39,7 +39,7 @@ MAX_RISK_ATR = 3.0
 RANGE_MIN_D1_ATR = 0.5
 RANGE_MAX_D1_ATR = 2.0
 MAX_HOLD_MS = 24 * H1
-EXCHANGE = os.environ.get("AMD_EXCHANGE", "binanceusdm")   # binanceusdm | bybit | okx | toobit
+EXCHANGE = os.environ.get("AMD_EXCHANGE", "okx")   # okx | gateio | kucoin | bybit | binanceusdm (مسدود در آمریکا) | toobit
 OUT_TRADES = os.environ.get("AMD_OUT", "amd_trades.csv")
 OUT_SUMMARY = os.environ.get("AMD_SUMMARY", "amd_summary.txt")
 
