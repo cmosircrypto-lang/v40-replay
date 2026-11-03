@@ -238,12 +238,16 @@ def run():
             if setup is None:
                 continue
             path = fetch_all(ex, sym, "5m", setup["entry_ms"] + H1, setup["entry_ms"] + H1 + MAX_HOLD_MS)
+            path_tf = "5m"
+            if not path:            # تاریخچه‌ی ۵دقیقه‌ای کوتاه است؛ برای ستاپ‌های قدیمی‌تر از ۱ساعته استفاده می‌شود
+                path = fetch_all(ex, sym, "1h", setup["entry_ms"] + H1, setup["entry_ms"] + H1 + MAX_HOLD_MS)
+                path_tf = "1h"
             path = [to_rows([b])[0] for b in path]
             res, R = simulate(setup["direction"], setup["entry"], setup["sl"], setup["tp"], path)
             trades.append({"symbol": sym, "day_utc": s, "entry_ms": setup["entry_ms"],
                            "direction": setup["direction"], "entry": setup["entry"],
                            "sl": setup["sl"], "tp": setup["tp"], "rr": round(setup["rr"], 3),
-                           "result": res, "R": "" if R is None else round(R, 4)})
+                           "result": res, "R": "" if R is None else round(R, 4), "path_tf": path_tf})
         print(f"{sym}: روزها {len(days)}")
 
     if not trades:
@@ -262,6 +266,8 @@ def summary(trades):
     n = len(closed)
     tpn = sum(1 for t in closed if t["result"] == "TP")
     Rs = [float(t["R"]) for t in closed]
+    src5 = sum(1 for t in trades if t.get("path_tf") == "5m")
+    lines.append(f"مسیر خروج: ۵دقیقه‌ای {src5} | ۱ساعته {len(trades) - src5}")
     lines.append(f"کل ستاپ‌ها: {len(trades)} | بسته‌شده: {n} | TIMEOUT: "
                  f"{sum(1 for t in trades if t['result'] == 'TIMEOUT')}")
     if n:
