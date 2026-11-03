@@ -12,8 +12,8 @@ on:
         default: "0.0006"
         required: false
       exchange:
-        description: "منبع داده: binanceusdm | bybit | okx | toobit"
-        default: "binanceusdm"
+        description: "منبع داده: okx | gateio | kucoin | bybit | toobit (binanceusdm در آمریکا مسدود است)"
+        default: "okx"
         required: false
 
 jobs:
