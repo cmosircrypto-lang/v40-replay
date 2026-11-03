@@ -11,6 +11,10 @@ on:
         description: "کارمزد هر طرف (مثلاً 0.0006)"
         default: "0.0006"
         required: false
+      exchange:
+        description: "منبع داده: binanceusdm | bybit | okx | toobit"
+        default: "binanceusdm"
+        required: false
 
 jobs:
   amd:
@@ -31,6 +35,7 @@ jobs:
         env:
           AMD_DAYS: ${{ github.event.inputs.days }}
           BT_FEE: ${{ github.event.inputs.fee }}
+          AMD_EXCHANGE: ${{ github.event.inputs.exchange }}
         run: python "amd backtest code.py"
 
       - name: Upload results
