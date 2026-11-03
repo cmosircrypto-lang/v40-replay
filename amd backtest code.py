@@ -39,8 +39,28 @@ MAX_RISK_ATR = 3.0
 RANGE_MIN_D1_ATR = 0.5
 RANGE_MAX_D1_ATR = 2.0
 MAX_HOLD_MS = 24 * H1
+EXCHANGE = os.environ.get("AMD_EXCHANGE", "binanceusdm")   # binanceusdm | bybit | okx | toobit
 OUT_TRADES = os.environ.get("AMD_OUT", "amd_trades.csv")
 OUT_SUMMARY = os.environ.get("AMD_SUMMARY", "amd_summary.txt")
+
+
+def make_exchange():
+    """منبع داده: Toobit (همان ربات) یا صرافی عمومی با تاریخچه‌ی طولانی‌تر."""
+    if EXCHANGE == "toobit":
+        return M.create_exchange()
+    import ccxt
+    ex = getattr(ccxt, EXCHANGE)({"enableRateLimit": True})
+    ex.load_markets()
+    return ex
+
+
+def to_ccxt_symbol(ex, sym):
+    """BTC-SWAP-USDT  ->  BTC/USDT:USDT  (None اگر در صرافی نباشد)."""
+    if EXCHANGE == "toobit":
+        return sym
+    base = sym.split("-")[0]
+    cand = f"{base}/USDT:USDT"
+    return cand if cand in ex.markets else None
 
 
 def fetch_all(ex, symbol, tf, since, until):
@@ -212,15 +232,22 @@ def detect_setup(h1, atr1, d1_rows, d1_atr, s):
 
 
 def run():
-    ex = M.create_exchange()
+    ex = make_exchange()
+    print(f"منبع داده: {EXCHANGE}")
     until = int(__import__("time").time() * 1000) // H1 * H1
     since = until - DAYS * 24 * H1
     trades = []
+    errors = []
     for sym in M.SYMBOLS:
+        csym = to_ccxt_symbol(ex, sym)
+        if csym is None:
+            print(f"skip {sym}: در {EXCHANGE} نیست")
+            continue
         try:
-            h1_raw = fetch_all(ex, sym, "1h", since - 24 * H1, until)
-            d1_raw = fetch_all(ex, sym, "1d", since - 60 * D1, until)
+            h1_raw = fetch_all(ex, csym, "1h", since - 24 * H1, until)
+            d1_raw = fetch_all(ex, csym, "1d", since - 60 * D1, until)
         except Exception as e:
+            errors.append(str(e)[:200])
             print(f"skip {sym}: {e}")
             continue
         if len(h1_raw) < 200 or len(d1_raw) < 30:
@@ -237,10 +264,10 @@ def run():
             setup = detect_setup(h1, atr1, d1, d1_atr, s)
             if setup is None:
                 continue
-            path = fetch_all(ex, sym, "5m", setup["entry_ms"] + H1, setup["entry_ms"] + H1 + MAX_HOLD_MS)
+            path = fetch_all(ex, csym, "5m", setup["entry_ms"] + H1, setup["entry_ms"] + H1 + MAX_HOLD_MS)
             path_tf = "5m"
             if not path:            # تاریخچه‌ی ۵دقیقه‌ای کوتاه است؛ برای ستاپ‌های قدیمی‌تر از ۱ساعته استفاده می‌شود
-                path = fetch_all(ex, sym, "1h", setup["entry_ms"] + H1, setup["entry_ms"] + H1 + MAX_HOLD_MS)
+                path = fetch_all(ex, csym, "1h", setup["entry_ms"] + H1, setup["entry_ms"] + H1 + MAX_HOLD_MS)
                 path_tf = "1h"
             path = [to_rows([b])[0] for b in path]
             res, R = simulate(setup["direction"], setup["entry"], setup["sl"], setup["tp"], path)
@@ -252,6 +279,8 @@ def run():
 
     if not trades:
         print("هیچ ستاپی پیدا نشد.")
+        if errors:
+            print("نمونه‌ی خطا:", errors[0])
         return
     with open(OUT_TRADES, "w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=list(trades[0].keys()))
