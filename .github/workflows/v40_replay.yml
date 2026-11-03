@@ -1,0 +1,26 @@
+name: V40 replay
+
+on:
+  workflow_dispatch:
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Run replay
+        run: python v40_replay.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v40-replay
+          path: v40_replay_trades.csv
