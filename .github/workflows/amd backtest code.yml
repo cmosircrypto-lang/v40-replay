@@ -1,4 +1,4 @@
-name: AMD backtest
+name: AMD backtest code
 
 on:
   workflow_dispatch:
@@ -18,8 +18,6 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: v40-replay
 
       - uses: actions/setup-python@v5
         with:
@@ -33,7 +31,7 @@ jobs:
         env:
           AMD_DAYS: ${{ github.event.inputs.days }}
           BT_FEE: ${{ github.event.inputs.fee }}
-        run: python amd_backtest.py
+        run: python "amd backtest code.py"
 
       - name: Upload results
         if: always()
