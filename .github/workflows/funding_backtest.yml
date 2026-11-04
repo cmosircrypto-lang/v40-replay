@@ -1,0 +1,44 @@
+name: Funding backtest
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "تعداد روز (پیش‌فرض ثبت‌شده: 365)"
+        default: "365"
+        required: false
+      exchange:
+        description: "okx (پیش‌فرض) | gateio | kucoin | bybit"
+        default: "okx"
+        required: false
+
+jobs:
+  funding:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Run funding backtest
+        env:
+          FUND_DAYS: ${{ github.event.inputs.days }}
+          FUND_EXCHANGE: ${{ github.event.inputs.exchange }}
+          BT_FEE: "0.0006"
+        run: python funding_backtest.py
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: funding-backtest-results
+          path: |
+            funding_trades.csv
+            funding_summary.txt
