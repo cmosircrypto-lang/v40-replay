@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 import ccxt
 
-EXCHANGES = os.environ.get("DEPTH_EXCHANGES", "okx,gateio,kucoin,bybit").split(",")
+EXCHANGES = os.environ.get("DEPTH_EXCHANGES", "okx,gate,kucoin,bybit").split(",")
 SYMS = ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT", "DOGE/USDT:USDT", "XRP/USDT:USDT"]
 LOOKBACK_DAYS = int(os.environ.get("DEPTH_LOOKBACK", "400"))
 H8 = 8 * 3600 * 1000
