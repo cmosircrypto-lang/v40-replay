@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 import main as M
 
-EXCHANGE = os.environ.get("FUND_EXCHANGE", "okx")
+EXCHANGE = os.environ.get("FUND_EXCHANGE", "okx").strip()
 DAYS = int(os.environ.get("FUND_DAYS", "365"))
 FEE = float(os.environ.get("BT_FEE", "0.0006"))
 H1 = 3600000
