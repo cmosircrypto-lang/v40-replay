@@ -91,7 +91,7 @@ def fetch_oi(ex, csym, since, until):
         if not batch:
             break
         for r in batch:
-            ts = int(r["timestamp"])
+            ts = int(r["timestamp"]) // D1 * D1  # هم‌تراز کردن با کندل روزانه (00:00 UTC)
             val = r.get("openInterestValue")
             if val is None:
                 val = r.get("openInterestAmount")
@@ -196,6 +196,8 @@ def run():
         if len(d) < 60 or len(oi) < 30:
             print(f"skip {sym}: داده‌ی کم (کندل {len(d)}، OI {len(oi)})")
             continue
+        overlap = sum(1 for k in oi if k in {c[0] for c in d})
+        print(f"  هم‌پوشانی روزهای OI با کندل: {overlap}/{len(oi)}")
         tr = simulate_symbol(d, oi)
         for t in tr:
             t["symbol"] = sym
