@@ -7,8 +7,6 @@ import os
 import time
 from datetime import datetime, timezone
 
-import main as M
-
 EXCHANGE = os.environ.get("TOI_EXCHANGE", "okx")
 DAYS = int(os.environ.get("TOI_DAYS", "365"))
 FEE = float(os.environ.get("BT_FEE", "0.0006"))
@@ -20,12 +18,39 @@ SL_ATR = 2.0
 TP_ATR = 3.0
 MAX_HOLD = 5
 COOLDOWN = 2
+SYMBOLS = [
+    "BTC-SWAP-USDT", "ETH-SWAP-USDT", "SOL-SWAP-USDT", "XRP-SWAP-USDT",
+    "BNB-SWAP-USDT", "DOGE-SWAP-USDT", "ADA-SWAP-USDT", "TRX-SWAP-USDT",
+    "AVAX-SWAP-USDT", "LINK-SWAP-USDT", "DOT-SWAP-USDT", "LTC-SWAP-USDT",
+    "BCH-SWAP-USDT", "TON-SWAP-USDT", "SUI-SWAP-USDT", "NEAR-SWAP-USDT",
+    "APT-SWAP-USDT", "ARB-SWAP-USDT", "OP-SWAP-USDT", "ATOM-SWAP-USDT",
+    "UNI-SWAP-USDT", "AAVE-SWAP-USDT", "FIL-SWAP-USDT", "INJ-SWAP-USDT",
+    "TIA-SWAP-USDT", "JUP-SWAP-USDT", "ENA-SWAP-USDT", "WIF-SWAP-USDT",
+    "1000PEPE-SWAP-USDT", "1000SHIB-SWAP-USDT", "WLD-SWAP-USDT", "SEI-SWAP-USDT",
+    "RUNE-SWAP-USDT", "LDO-SWAP-USDT", "STX-SWAP-USDT", "IMX-SWAP-USDT",
+    "HBAR-SWAP-USDT", "ICP-SWAP-USDT", "ETC-SWAP-USDT", "XLM-SWAP-USDT",
+    "CRV-SWAP-USDT", "SNX-SWAP-USDT",
+    "COMP-SWAP-USDT", "SUSHI-SWAP-USDT", "1INCH-SWAP-USDT", "GRT-SWAP-USDT",
+    "DYDX-SWAP-USDT", "GMX-SWAP-USDT", "PENDLE-SWAP-USDT", "ONDO-SWAP-USDT",
+    "JTO-SWAP-USDT", "PYTH-SWAP-USDT", "STRK-SWAP-USDT", "MANTA-SWAP-USDT",
+    "1000BONK-SWAP-USDT", "1000FLOKI-SWAP-USDT", "MEME-SWAP-USDT", "ORDI-SWAP-USDT",
+    "1000SATS-SWAP-USDT", "1000RATS-SWAP-USDT", "POPCAT-SWAP-USDT",
+    "BRETT-SWAP-USDT", "TURBO-SWAP-USDT", "1000000MOG-SWAP-USDT", "DOGS-SWAP-USDT",
+    "FET-SWAP-USDT", "TAO-SWAP-USDT",
+    "AKT-SWAP-USDT", "ILV-SWAP-USDT",
+    "AXS-SWAP-USDT", "SAND-SWAP-USDT", "MANA-SWAP-USDT", "GALA-SWAP-USDT",
+    "ALGO-SWAP-USDT", "VET-SWAP-USDT", "EGLD-SWAP-USDT", "FLOW-SWAP-USDT",
+    "KAVA-SWAP-USDT", "ROSE-SWAP-USDT", "KAS-SWAP-USDT",
+    "THETA-SWAP-USDT", "CHZ-SWAP-USDT", "ENJ-SWAP-USDT", "ZIL-SWAP-USDT",
+    "ONE-SWAP-USDT", "QTUM-SWAP-USDT", "IOTA-SWAP-USDT", "NEO-SWAP-USDT",
+]
 OUT_TRADES = os.environ.get("TOI_OUT", "trend_oi_trades.csv")
 OUT_SUMMARY = os.environ.get("TOI_SUMMARY", "trend_oi_summary.txt")
 
 
 def make_exchange():
     if EXCHANGE == "toobit":
+        import main as M  # فقط برای تست offline
         return M.create_exchange()
     import ccxt
     ex = getattr(ccxt, EXCHANGE)({"enableRateLimit": True})
@@ -157,7 +182,7 @@ def run():
     until = int(time.time() * 1000) // D1 * D1
     since = until - DAYS * D1
     all_trades = []
-    for sym in M.SYMBOLS:
+    for sym in SYMBOLS:
         csym = to_ccxt_symbol(ex, sym)
         if csym is None:
             print(f"skip {sym}: در {EXCHANGE} نیست")
