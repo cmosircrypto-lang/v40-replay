@@ -32,7 +32,7 @@ jobs:
           MOM_DAYS: ${{ github.event.inputs.days }}
           MOM_EXCHANGE: ${{ github.event.inputs.exchange }}
           BT_FEE: "0.0006"
-        run: python momentum_backtest.py
+        run: python "momentum backtest code.py"
 
       - name: Upload results
         if: always()
