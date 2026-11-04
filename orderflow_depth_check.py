@@ -12,7 +12,7 @@ import ccxt
 
 EXCHANGES = os.environ.get("OI_EXCHANGES", "okx,gate,kucoin,bybit").split(",")
 SYMS = ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
-LOOKBACK_DAYS = int(os.environ.get("OI_LOOKBACK", "170"))   # Gate: حداکثر ۱۸۰ روز
+LOOKBACK_DAYS = int(os.environ.get("OI_LOOKBACK", "365"))   # Gate: حداکثر ۱۸۰ روز (در ادامه محدود می‌شود)
 TIMEFRAMES = ["1h", "4h", "1d"]
 OUT = os.environ.get("OI_OUT", "orderflow_depth_report.txt")
 DAY = 86400000
@@ -24,7 +24,8 @@ def iso(ms):
 
 def probe(ex, method_name, sym, tf):
     method = getattr(ex, method_name)
-    since = int(time.time() * 1000) - LOOKBACK_DAYS * DAY
+    days = min(LOOKBACK_DAYS, 170) if ex.id == "gate" else LOOKBACK_DAYS
+    since = int(time.time() * 1000) - days * DAY
     stamps = set()
     cur = since
     for _ in range(200):
@@ -61,7 +62,7 @@ def check(ex, method_name, sym):
 
 
 def main():
-    lines = [f"عمق داده‌های حجم/موقعیت (درخواست تا {LOOKBACK_DAYS} روز قبل)", ""]
+    lines = [f"عمق داده‌های حجم/موقعیت (درخواست تا {LOOKBACK_DAYS} روز قبل؛ Gate تا ۱۷۰ روز)", ""]
     for name in EXCHANGES:
         name = name.strip()
         lines.append(f"== {name} ==")
