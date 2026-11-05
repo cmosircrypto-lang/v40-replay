@@ -10,7 +10,7 @@ EXCHANGE = os.environ.get("CD_EXCHANGE", "okx")
 SYMS = ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
 TFS = {"1w": 7 * 86400000, "1d": 86400000, "4h": 4 * 3600000,
        "1h": 3600000, "30m": 1800000, "15m": 900000}
-LOOKBACK_DAYS = [30, 60, 90, 120, 180, 270, 365, 545, 730, 1095]
+LOOKBACK_DAYS = [30, 60, 90, 120, 180, 270, 365, 545, 730, 1095, 1460, 1825, 2555, 3650]
 OUT = os.environ.get("CD_OUT", "candle_depth.txt")
 
 
@@ -24,8 +24,9 @@ def probe(ex, sym, tf, days):
     if not rows:
         return False, "خالی"
     first = int(rows[0][0])
+    first_date = time.strftime("%Y-%m-%d", time.gmtime(first / 1000))
     # اگر اولین کندل نزدیک since باشد، عمق کافی است
-    return abs(first - since) <= 3 * step, first
+    return abs(first - since) <= 3 * step, first_date
 
 
 def main():
@@ -38,14 +39,17 @@ def main():
             continue
         lines.append(f"--- {sym} ---")
         for tf in TFS:
-            best = None
+            best, best_info = None, ""
             for d in LOOKBACK_DAYS:
                 ok, info = probe(ex, sym, tf, d)
                 if ok is True:
-                    best = d
+                    best, best_info = d, info
                 else:
                     break
-            lines.append(f"{tf:>4}: حداکثر ~{best if best else 'کمتر از ۳۰'} روز")
+            if best:
+                lines.append(f"{tf:>4}: حداکثر ~{best} روز (اولین کندل: {best_info})")
+            else:
+                lines.append(f"{tf:>4}: کمتر از ۳۰ روز یا خطا ({info})")
     text = "\n".join(lines)
     print(text)
     with open(OUT, "w", encoding="utf-8") as fh:
