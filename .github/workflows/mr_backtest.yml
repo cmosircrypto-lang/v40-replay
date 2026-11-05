@@ -1,0 +1,44 @@
+name: Mean reversion after extreme daily move backtest
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "تعداد روز (پیش‌فرض ثبت‌شده: 365)"
+        default: "365"
+        required: false
+      exchange:
+        description: "okx (پیش‌فرض ثبت‌شده)"
+        default: "okx"
+        required: false
+
+jobs:
+  mr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Run mean reversion backtest
+        env:
+          MR_DAYS: ${{ github.event.inputs.days }}
+          MR_EXCHANGE: ${{ github.event.inputs.exchange }}
+          BT_FEE: "0.0006"
+        run: python mr_backtest.py
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mr-backtest-results
+          path: |
+            mr_trades.csv
+            mr_summary.txt
