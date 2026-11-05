@@ -1,0 +1,31 @@
+name: Session volatility analysis (1Y, descriptive)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  sess:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Run session volatility
+        env:
+          SESS_EXCHANGE: okx
+        run: python session_volatility.py
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: session-volatility-results
+          path: session_summary.txt
