@@ -1,0 +1,40 @@
+name: MTF trend + 5m RSI/volume backtest (gross)
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "تعداد روز (پیش‌فرض ثبت‌شده: 730)"
+        default: "730"
+        required: false
+
+jobs:
+  mtf5:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Run MTF 5m backtest
+        env:
+          MTF5_DAYS: ${{ github.event.inputs.days }}
+          MTF5_EXCHANGE: okx
+          BT_FEE: "0.0006"
+        run: python mtf5_backtest.py
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mtf5-backtest-results
+          path: |
+            mtf5_trades.csv
+            mtf5_summary.txt
