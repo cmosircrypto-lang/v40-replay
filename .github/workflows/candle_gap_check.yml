@@ -1,0 +1,31 @@
+name: Candle gap check (OKX 15m & 1h)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  gap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Run gap check
+        env:
+          GAP_EXCHANGE: okx
+        run: python candle_gap_check.py
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: candle-gap-results
+          path: candle_gap.txt
