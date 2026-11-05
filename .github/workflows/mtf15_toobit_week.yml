@@ -1,0 +1,40 @@
+name: MTF 15m rules - Toobit last 7 days (descriptive)
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "تعداد روز (پیش‌فرض ۷)"
+        default: "7"
+        required: false
+
+jobs:
+  toobit7:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Run Toobit 7-day check
+        env:
+          MTF15_DAYS: ${{ github.event.inputs.days }}
+          MTF15_EXCHANGE: toobit
+          BT_FEE: "0.0006"
+        run: python mtf15_toobit_week.py
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mtf15-toobit-week-results
+          path: |
+            mtf15_toobit_week_trades.csv
+            mtf15_toobit_week_summary.txt
