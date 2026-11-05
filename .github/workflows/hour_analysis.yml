@@ -1,0 +1,31 @@
+name: Hour-of-day descriptive analysis (gross)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  hour:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Run hour analysis
+        env:
+          HOUR_EXCHANGE: okx
+        run: python hour_analysis.py
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hour-analysis-results
+          path: hour_summary.txt
