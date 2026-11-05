@@ -1,0 +1,40 @@
+name: MTF trend + 15m RSI/volume backtest (gross)
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "تعداد روز (پیش‌فرض ثبت‌شده: 1825)"
+        default: "1825"
+        required: false
+
+jobs:
+  mtf15:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Run MTF 15m backtest
+        env:
+          MTF15_DAYS: ${{ github.event.inputs.days }}
+          MTF15_EXCHANGE: okx
+          BT_FEE: "0.0006"
+        run: python mtf15_backtest.py
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mtf15-backtest-results
+          path: |
+            mtf15_trades.csv
+            mtf15_summary.txt
