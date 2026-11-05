@@ -118,7 +118,7 @@ def fetch(ex, sym, tf, step, since, until):
     rows = {}
     cur = since
     while cur < until:
-        batch = ex.fetch_ohlcv(sym, timeframe=tf, since=cur, limit=100)
+        batch = ex.fetch_ohlcv(sym, timeframe=tf, since=cur, limit=(1000 if EXCHANGE == "toobit" else 100))
         if not batch:
             break
         for b in batch:
