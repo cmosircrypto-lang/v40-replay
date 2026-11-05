@@ -273,19 +273,24 @@ def iso(ms):
 
 def run():
     ex = getattr(ccxt, EXCHANGE)({"enableRateLimit": True})
-    ex.load_markets()
+    if EXCHANGE != "toobit":
+        ex.load_markets()
     now = int(time.time() * 1000)
     start_ms = now - DAYS * D1
     since = start_ms - WARM
     all_trades = []
     for sym in SYMBOLS:
-        if sym not in ex.markets:
+        if EXCHANGE != "toobit" and sym not in ex.markets:
             print(f"skip {sym}: نیست", flush=True)
             continue
-        d1 = fetch(ex, sym, "1d", D1, since, now)
-        h4 = fetch(ex, sym, "4h", H4, since, now)
-        h1 = fetch(ex, sym, "1h", H1, since, now)
-        m5 = fetch(ex, sym, "15m", M15, since, now)
+        try:
+            d1 = fetch(ex, sym, "1d", D1, since, now)
+            h4 = fetch(ex, sym, "4h", H4, since, now)
+            h1 = fetch(ex, sym, "1h", H1, since, now)
+            m5 = fetch(ex, sym, "15m", M15, since, now)
+        except Exception as e:
+            print(f"skip {sym}: {str(e)[:150]}", flush=True)
+            continue
         depth = iso(m5[0][0]) if m5 else "-"
         print(f"{sym}: 15m={len(m5)} (از {depth}) | 1h={len(h1)} | 4h={len(h4)} | 1d={len(d1)}", flush=True)
         if len(m5) < 500:
