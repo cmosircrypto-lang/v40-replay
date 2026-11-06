@@ -9,6 +9,7 @@
 """
 import csv
 import os
+import time
 import statistics as st
 import numpy as np
 
@@ -19,8 +20,8 @@ FEE_PCT = 0.12  # رفت و برگشت، درصد از ورود
 MAX_DIST_PCT = 20.0
 TP_GRID = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0]
 SL_GRID = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0]
-FINE_TP = [round(x, 2) for x in np.arange(0.2, 6.01, 0.2)]
-FINE_SL = [round(x, 2) for x in np.arange(0.1, 6.01, 0.1)]
+FINE_TP = sorted(set([round(x, 2) for x in np.arange(0.2, 6.01, 0.2)] + TP_GRID))
+FINE_SL = sorted(set([round(x, 2) for x in np.arange(0.1, 6.01, 0.1)] + SL_GRID))
 MIN_SYM_N = 5
 
 
@@ -73,9 +74,13 @@ def resolve(P, tp_pct, sl_pct):
 def main():
     import ccxt
     ex = ccxt.toobit({"enableRateLimit": True})
-    trades, dropped = [], []
+    trades, dropped, incomplete = [], [], 0
+    now_ms = int(time.time() * 1000)
     for name, pat in VERSIONS:
         for tr in load_trades(find_file(pat), name):
+            if tr["t"] + HORIZON_MIN * MIN_MS > now_ms - 2 * MIN_MS:
+                incomplete += 1
+                continue
             dist_sl = abs(tr["sl"] - tr["e"]) / tr["e"] * 100
             dist_tp = abs(tr["tp"] - tr["e"]) / tr["e"] * 100
             if dist_sl > MAX_DIST_PCT or dist_tp > MAX_DIST_PCT:
@@ -96,7 +101,7 @@ def main():
         if P is None:
             continue
         paths.append((tr, P))
-    print(f"mode={state['mode']} trades={len(trades)} with_path={len(paths)} dropped={len(dropped)}", flush=True)
+    print(f"mode={state['mode']} trades={len(trades)} with_path={len(paths)} dropped={len(dropped)} incomplete={incomplete}", flush=True)
 
     # ----- معیارهای هر معامله با سطوح خود ربات -----
     rows = []
@@ -145,7 +150,7 @@ def main():
 
     L = []
     L.append("مسیر کامل معاملات (تا ۳ روز یا تعیین تکلیف) — همه‌ی اعداد بر حسب درصد از ورود")
-    L.append(f"روش داده: {state['mode']} | معاملات: {len(trades)} | با مسیر: {len(paths)} | حذف‌شده (فاصله‌ی غیرعادی): {len(dropped)}")
+    L.append(f"روش داده: {state['mode']} | معاملات: {len(trades)} | با مسیر کامل: {len(paths)} | حذف‌شده (فاصله‌ی غیرعادی): {len(dropped)} | افق ۳ روزه هنوز کامل نشده (کنار گذاشته شد): {incomplete}")
     if dropped:
         L.append("ردیف‌های حذف‌شده: " + " ; ".join(dropped[:10]))
     if nodata:
