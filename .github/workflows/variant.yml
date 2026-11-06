@@ -1,0 +1,29 @@
+name: TP half, SL double (Toobit 5m, 3 days)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  variant:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r requirements.txt openpyxl numpy
+
+      - name: Run variant comparison
+        run: python variant_half_tp_double_sl.py
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: variant-results
+          path: variant_half_tp_double_sl_summary.txt
