@@ -1,0 +1,32 @@
+name: Full trade paths and SL/TP distance grid (Toobit 5m, 3 days)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  life:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r requirements.txt openpyxl numpy
+
+      - name: Run full path analysis
+        run: python life.py
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: life-results
+          path: |
+            life_summary.txt
+            life_signals.csv
+            life_grid.csv
