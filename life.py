@@ -124,10 +124,11 @@ def main():
             post_adv = P["adv"][isl + 1:]
             pf = float(post.max()) if len(post) else 0.0
             pa = float(post_adv.max()) if len(post_adv) else 0.0
-            row.update({"post_fav_pct": pf, "post_adv_pct": pa,
+            extra = max(pa - tr["sl_pct"], 0.0)  # حرکت نامطلوب اضافه بر SL
+            row.update({"post_fav_pct": pf, "post_adv_pct": pa, "post_extra_adv_pct": extra,
                         "post_tp_reached": pf >= tr["tp_pct"],
                         "post_returned_entry": pf >= 0,
-                        "post_continued": pa >= 0.5 * tr["sl_pct"]})
+                        "post_continued": extra >= 0.5 * tr["sl_pct"]})
         rows.append(row)
 
     # ----- شبکه‌ی TP/SL ثابت (درصد)، روی همه‌ی معاملات -----
@@ -193,7 +194,8 @@ def main():
         n = len(sl_rows)
         L.append(f"تعداد SL در مسیر (n={n}) | بعد از SL، حداقل نیم فاصله‌ی SL به نفع معامله برگشته (از ورود گذشته): "
                  f"{sum(1 for r in sl_rows if r['post_returned_entry'])/n*100:.1f}%")
-        L.append(f"  بعد از SL، حداقل ۵۰٪ فاصله‌ی SL در جهت ضد معامله ادامه داده (ادامه‌ی روند): {sum(1 for r in sl_rows if r['post_continued'])/n*100:.1f}%")
+        L.append(f"  بعد از SL، حداقل ۵۰٪ فاصله‌ی SL بیشتر در جهت ضد معامله ادامه داده (ادامه‌ی روند): {sum(1 for r in sl_rows if r['post_continued'])/n*100:.1f}%")
+        L.append(f"  میانه‌ی حرکت اضافه بعد از SL (بیشتر از خود SL) = {st.median(r['post_extra_adv_pct'] for r in sl_rows):.2f}%")
         L.append(f"  بعد از SL، TP (فرضی) هم لمس شده: {sum(1 for r in sl_rows if r['post_tp_reached'])/n*100:.1f}%")
         L.append(f"  میانه‌ی بیشترین حرکت مطلوب بعد از SL = {st.median(r['post_fav_pct'] for r in sl_rows):.2f}% | "
                  f"میانه‌ی بیشترین حرکت نامطلوب بعد از SL = {st.median(r['post_adv_pct'] for r in sl_rows):.2f}%")
@@ -225,6 +227,18 @@ def main():
             g = next(g for g in grid_rows if g["tp_pct"] == x and g["sl_pct"] == s)
             vals.append(f"{g['p_tp_first']:6.1f}")
         L.append(f"{x:5.1f} " + " ".join(vals))
+    # ----- بررسی درستیِ شبیه‌ساز: مسیر با سطوح خود ربات در برابر نتیجه‌ی واقعی فایل -----
+    L.append("")
+    L.append("=== ۴) تطابق شبیه‌ساز (سطوح خود ربات) با نتیجه‌ی نهایی فایل ===")
+    L.append("ردیف = نتیجه‌ی شبیه‌ساز، ستون = نتیجه‌ی فایل")
+    cats = ["TP", "SL", "NONE"]
+    excel_cats = ["TP", "SL", "OPEN"]
+    L.append("شبیه‌ساز \\ فایل   " + "  ".join(f"{c:>6}" for c in excel_cats))
+    for bo in cats:
+        vals = [sum(1 for r in rows if r["bot_outcome"] == bo and r["excel"] == ec) for ec in excel_cats]
+        L.append(f"{bo:14}" + "  ".join(f"{v:>6}" for v in vals))
+    agree = sum(1 for r in rows if (r["bot_outcome"] == r["excel"]) or (r["bot_outcome"] == "NONE" and r["excel"] == "OPEN"))
+    L.append(f"درصد توافق: {agree/len(rows)*100:.1f}% (n={len(rows)})")
     text = "\n".join(L)
     print(text)
     with open(os.path.join(BASE_DIR, "life_summary.txt"), "w", encoding="utf-8") as fh:
@@ -232,7 +246,7 @@ def main():
     cols = ["version", "sym", "t_utc", "dir", "entry", "sl_pct", "tp_pct", "excel", "bot_outcome", "tp_touched",
             "tp_min", "sl_min", "max_fav_before_exit_pct", "max_fav_before_exit_frac_tp", "max_fav_full_pct",
             "max_adv_before_tp_pct", "post_fav_pct", "post_adv_pct", "post_tp_reached",
-            "post_returned_entry", "post_continued"]
+            "post_extra_adv_pct", "post_returned_entry", "post_continued"]
     with open(os.path.join(BASE_DIR, "life_signals.csv"), "w", encoding="utf-8", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=cols, extrasaction="ignore")
         w.writeheader()
