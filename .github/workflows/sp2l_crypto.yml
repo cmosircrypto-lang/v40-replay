@@ -1,0 +1,31 @@
+name: SP2L_CRYPTO backtest (88 symbols, Toobit 1m, descriptive)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  sp2l-crypto:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install deps
+        run: pip install ccxt numpy
+
+      - name: Run backtest
+        run: python sp2l_crypto_backtest.py
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sp2l-crypto-results
+          path: |
+            sp2l_crypto_summary.txt
+            sp2l_crypto_trades.csv
